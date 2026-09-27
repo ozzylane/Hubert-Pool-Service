@@ -1,6 +1,6 @@
 {
-  "name": "Hubert Pool Service",
-  "short_name": "Hubert Pool",
+  "name": "Huber Pools LLC",
+  "short_name": "Huber Pools",
   "description": "Route, service log, water chemistry and photo reports.",
   "start_url": "./#/today",
   "scope": "./",

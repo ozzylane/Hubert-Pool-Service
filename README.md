@@ -1,4 +1,4 @@
-# Hubert Pool Service
+# Huber Pools LLC
 
 A phone-first web app for running a pool route: clients, daily schedule, service
 checklist, water chemistry, before/after photos, and a photo report sent to the

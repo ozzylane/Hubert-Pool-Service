@@ -27,7 +27,7 @@ export const READINGS = [
 ];
 
 const DEFAULT_SETTINGS = {
-  businessName: 'Hubert Pool Service',
+  businessName: 'Huber Pools LLC',
   techName: 'Hubert',
   phone: '',
   email: '',
@@ -185,6 +185,11 @@ function debounce(fn, ms) {
 async function loadSettings() {
   const rec = await db.get('settings', 'main');
   settings = { ...DEFAULT_SETTINGS, ...(rec?.value || {}) };
+  // The business was renamed; update devices still showing the old default name.
+  if (settings.businessName === 'Hubert Pool Service') {
+    settings.businessName = DEFAULT_SETTINGS.businessName;
+    await saveSettings();
+  }
 }
 async function saveSettings() {
   await db.put('settings', { key: 'main', value: settings });
@@ -1315,7 +1320,7 @@ async function importBackup(file) {
     toast('That file isn\'t a valid backup');
     return;
   }
-  if (data.app !== 'hubert-pool-service') { toast('That file isn\'t a Hubert Pool Service backup'); return; }
+  if (data.app !== 'hubert-pool-service') { toast('That file isn\'t a Huber Pools backup'); return; }
   if (!confirm(`Restore ${data.clients.length} clients and ${data.visits.length} visits from ${new Date(data.exportedAt).toLocaleDateString()}? Records with the same ID will be replaced.`)) return;
   for (const p of data.photos || []) {
     const blob = await (await fetch(p.data)).blob();

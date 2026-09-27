@@ -131,7 +131,7 @@ export async function buildReportCard(visit, client, settings) {
 
   ctx.fillStyle = '#ffffff';
   ctx.font = font(800, 56);
-  ctx.fillText(settings.businessName || 'Pool Service', P, 92, inner);
+  ctx.fillText(settings.businessName || 'Huber Pools LLC', P, 92, inner);
   ctx.font = font(500, 32);
   ctx.fillStyle = 'rgba(255,255,255,.85)';
   ctx.fillText('Pool Service Report', P, 142);
