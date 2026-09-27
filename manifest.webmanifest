@@ -1,0 +1,15 @@
+{
+  "name": "Hubert Pool Service",
+  "short_name": "Hubert Pool",
+  "description": "Route, service log, water chemistry and photo reports.",
+  "start_url": "./#/today",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f2f6f9",
+  "theme_color": "#0b6fa4",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

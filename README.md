@@ -1,0 +1,77 @@
+# Hubert Pool Service
+
+A phone-first web app for running a pool route: clients, daily schedule, service
+checklist, water chemistry, before/after photos, and a photo report sent to the
+customer by text or email.
+
+It's a plain HTML/CSS/JavaScript app with no build step and no server. It runs on
+GitHub Pages and installs to the phone's Home Screen like a normal app. It
+also works offline.
+
+## Features
+
+- **Today's route**: the clients due today, in the order you set, with progress, gate codes and one-tap directions. "Open remaining route" sends every remaining stop to Google Maps. Clients who are overdue are flagged.
+- **Clients**: name, mobile number, email, address, service days, how often (weekly / every 2 weeks / monthly / on call), pool type (chlorine or salt), gallons, rate, gate code and notes.
+- **Service visit**: before and after photos, a checklist you can edit, water test readings (chlorine, pH, alkalinity, CYA, calcium, salt, temperature) with target ranges and last visit's numbers, chemicals added and notes. Unfinished visits are saved automatically. If the phone closes the app while the camera is open, nothing is lost.
+- **Send report**: builds a branded report image (photo, readings, checklist, chemicals, notes) and opens the phone's share menu to send it by **Messages** or **Mail**. **Text** / **Email** buttons open a message already addressed to the customer with a written summary.
+- **History**: every visit, with visits this week and this month, an estimate of what was billed this month, and a "report not sent" filter.
+- **Backup / restore**: saves all data, including photos, to a single file.
+
+## Where the data lives
+
+Everything is stored **on the phone** (IndexedDB), not on GitHub. The GitHub
+repository holds only the app code, so the repo can be public without exposing
+any customer information. Because the data is on one device:
+
+- Install the app to the Home Screen. On iPhone, Safari may clear data for websites that haven't been visited in a while, but installed apps are kept.
+- Tap **Settings → Save backup file** every week or so, and keep the file in iCloud Drive / Google Drive. The app reminds you when a backup is more than 7 days old.
+- To move to a new phone, restore that file there.
+
+## Publishing on GitHub Pages
+
+1. Create a new repository on GitHub, for example `hubert-pool-service`.
+2. Push this folder to it:
+   ```bash
+   git remote add origin https://github.com/<your-username>/hubert-pool-service.git
+   git push -u origin main
+   ```
+3. On GitHub: **Settings → Pages → Build and deployment → Source: Deploy from a branch → `main` / `(root)` → Save**.
+4. After a minute the app is live at `https://<your-username>.github.io/hubert-pool-service/`.
+
+## Installing on the phone
+
+- **iPhone**: open the link in **Safari** → Share button → **Add to Home Screen**.
+- **Android**: open the link in **Chrome** → ⋮ menu → **Install app** / **Add to Home screen**.
+
+Then open **Settings** in the app and enter the business phone number and email so they appear on reports.
+
+## Sending reports: how it works
+
+A website can't send texts or emails in the background without a paid service
+(for example Twilio or SendGrid). This app uses the phone's own apps instead:
+
+1. **Send photo report** opens the share menu with the report image and summary attached. Choose Messages or Mail, then pick the customer.
+2. **Text** / **Email** open a new message already addressed to the customer with the written summary. To include the photo, use **Save image** first and attach it.
+
+The app records when each report was sent, and History lists any visits without one.
+
+## Development
+
+Run it locally with any static server:
+
+```bash
+python3 -m http.server 8765
+```
+
+Then open http://localhost:8765. After changing files, bump `VERSION` in `sw.js`
+so installed phones pick up the new version.
+
+| File | Purpose |
+| --- | --- |
+| `index.html` | Page shell and tab bar |
+| `app.js` | Screens, routing and app logic |
+| `report.js` | Customer report text and image |
+| `db.js` | IndexedDB storage |
+| `styles.css` | Mobile-first styles, light and dark mode |
+| `sw.js` | Offline caching |
+| `manifest.webmanifest`, `icons/` | Home Screen install |
