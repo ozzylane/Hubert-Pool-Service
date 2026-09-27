@@ -1,6 +1,6 @@
 // Offline support: serve the app shell from cache, refresh it in the background.
 // Bump VERSION when shipping changes to force a clean cache.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `hubert-pool-${VERSION}`;
 const SHELL = [
   './',
@@ -8,6 +8,7 @@ const SHELL = [
   './styles.css',
   './app.js',
   './db.js',
+  './auth.js',
   './report.js',
   './manifest.webmanifest',
   './icons/icon-192.png',

@@ -45,6 +45,18 @@ export const db = {
   keys: (store) => run(store, 'readonly', s => s.getAllKeys()),
 };
 
+// Permanently deletes the whole database (used by "forgot password → erase").
+export async function destroyDatabase() {
+  if (dbPromise) (await dbPromise).close();
+  dbPromise = null;
+  await new Promise((resolve, reject) => {
+    const req = indexedDB.deleteDatabase(DB_NAME);
+    req.onsuccess = resolve;
+    req.onerror = () => reject(req.error);
+    req.onblocked = resolve;
+  });
+}
+
 export function uid() {
   if (crypto.randomUUID) return crypto.randomUUID();
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);

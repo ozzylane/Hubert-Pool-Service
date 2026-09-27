@@ -368,3 +368,12 @@ body.no-tabbar .tabbar { display: none; }
   .readings { grid-template-columns: repeat(3, 1fr); }
   .photo-grid { grid-template-columns: repeat(4, 1fr); }
 }
+
+/* ---------- Login ---------- */
+body.locked .topbar, body.locked .tabbar { display: none; }
+body.locked .app { padding-top: calc(env(safe-area-inset-top) + 24px); }
+.auth { max-width: 420px; margin: 0 auto; }
+.auth-brand { text-align: center; margin: 12px 0 20px; }
+.auth-brand img { border-radius: 18px; box-shadow: var(--shadow); }
+.auth-brand h1 { font-size: 22px; margin-top: 10px; }
+.auth input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--brand); }

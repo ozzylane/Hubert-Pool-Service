@@ -10,6 +10,7 @@ also works offline.
 
 ## Features
 
+- **Login**: the first time the app opens, it asks Hubert to create a username and password. After that it asks for them to open the app. "Keep me signed in for 30 days" means he doesn't have to type them at every stop. After 5 wrong tries, sign-in is paused for 30 seconds.
 - **Today's route**: the clients due today, in the order you set, with progress, gate codes and one-tap directions. "Open remaining route" sends every remaining stop to Google Maps. Clients who are overdue are flagged.
 - **Clients**: name, mobile number, email, address, service days, how often (weekly / every 2 weeks / monthly / on call), pool type (chlorine or salt), gallons, rate, gate code and notes.
 - **Service visit**: before and after photos, a checklist you can edit, water test readings (chlorine, pH, alkalinity, CYA, calcium, salt, temperature) with target ranges and last visit's numbers, chemicals added and notes. Unfinished visits are saved automatically. If the phone closes the app while the camera is open, nothing is lost.
@@ -26,6 +27,14 @@ any customer information. Because the data is on one device:
 - Install the app to the Home Screen. On iPhone, Safari may clear data for websites that haven't been visited in a while, but installed apps are kept.
 - Tap **Settings → Save backup file** every week or so, and keep the file in iCloud Drive / Google Drive. The app reminds you when a backup is more than 7 days old.
 - To move to a new phone, restore that file there.
+
+## Login and password storage
+
+- The username and password are **not in the code**. The code is public on GitHub, so anything written into it could be read by anyone.
+- They're stored on the phone, in the app's own storage. The password is kept only as a salted hash (PBKDF2-SHA256, 210,000 rounds), never as readable text. The phone's password manager (iCloud Keychain / Google Password Manager) can also offer to save the login.
+- Change the username or password under **Settings → Account**.
+- **Forgot password:** there's no server that could reset it. The sign-in screen offers **Forgot password? → Erase all data on this device**. After that, create a new login and restore the latest backup file. Backup files don't contain the login.
+- The login keeps other people from opening the app on Hubert's phone. It isn't bank-grade security: someone with the unlocked phone and technical skills could still read the app's stored data. Keep a passcode on the phone as well.
 
 ## Publishing on GitHub Pages
 
@@ -72,6 +81,7 @@ so installed phones pick up the new version.
 | `app.js` | Screens, routing and app logic |
 | `report.js` | Customer report text and image |
 | `db.js` | IndexedDB storage |
+| `auth.js` | Login, password hashing, sessions |
 | `styles.css` | Mobile-first styles, light and dark mode |
 | `sw.js` | Offline caching |
 | `manifest.webmanifest`, `icons/` | Home Screen install |

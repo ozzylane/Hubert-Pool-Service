@@ -1,4 +1,5 @@
-import { db, uid } from './db.js';
+import { db, uid, destroyDatabase } from './db.js';
+import { getAccount, saveAccount, checkPassword, verifyLogin, isSignedIn, startSession, endSession, REMEMBER_DAYS } from './auth.js';
 import { buildReportCard, reportText } from './report.js';
 
 // ---------------------------------------------------------------------------
@@ -271,9 +272,13 @@ const routes = [
   [/^#\/settings$/, viewSettings],
 ];
 
+let unlocked = false;
+
 async function router() {
   const hash = location.hash || '#/today';
   const token = ++renderToken;
+  if (!unlocked) { await viewAuth(); return; }
+  document.body.classList.remove('locked');
   const current = () => token === renderToken;
   revokeUrls();
   for (const [re, view] of routes) {
@@ -1139,7 +1144,7 @@ async function viewHistory(m, current) {
 // Settings + backup
 // ---------------------------------------------------------------------------
 async function viewSettings(m, current) {
-  const [clients, visits, photoKeys] = await Promise.all([db.keys('clients'), db.keys('visits'), db.keys('photos')]);
+  const [clients, visits, photoKeys, account] = await Promise.all([db.keys('clients'), db.keys('visits'), db.keys('photos'), getAccount()]);
   let usage = '';
   try {
     const est = await navigator.storage?.estimate?.();
@@ -1176,6 +1181,20 @@ async function viewSettings(m, current) {
       <button class="btn primary block" type="submit">Save settings</button>
     </form>
 
+    <div class="section"><h2>Account</h2></div>
+    <div class="card stack">
+      <p class="small" style="margin:0">Signed in as <b>${esc(account?.username || '')}</b>.</p>
+      <button class="btn block" id="change-login">Change username or password</button>
+      <form id="login-form" class="stack" hidden autocomplete="on">
+        <label class="field"><span>Username</span><input name="username" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(account?.username || '')}" required></label>
+        <label class="field"><span>Current password</span><input name="current" type="password" autocomplete="current-password" required></label>
+        <label class="field"><span>New password <span class="tiny">(leave blank to keep the current one)</span></span><input name="password" type="password" autocomplete="new-password" minlength="6"></label>
+        <label class="field"><span>Confirm new password</span><input name="confirm" type="password" autocomplete="new-password"></label>
+        <button class="btn primary block" type="submit">Save login</button>
+      </form>
+      <button class="btn danger block" id="sign-out">Sign out</button>
+    </div>
+
     <div class="section"><h2>Backup</h2></div>
     <div class="card stack">
       <p class="small" style="margin:0">Everything is stored on this phone only: ${clients.length} clients, ${visits.length} visits, ${photoKeys.length} photos${usage ? ` (${usage})` : ''}.
@@ -1209,6 +1228,30 @@ async function viewSettings(m, current) {
     });
     await saveSettings();
     toast('Settings saved');
+  });
+
+  $('#change-login').addEventListener('click', () => {
+    $('#login-form').hidden = false;
+    $('#change-login').hidden = true;
+    $('#login-form [name=current]').focus();
+  });
+  $('#login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const username = fd.get('username').trim();
+    const password = fd.get('password');
+    if (!username) { toast('Enter a username'); return; }
+    if (!(await checkPassword(fd.get('current')))) { toast('Current password is incorrect'); return; }
+    if (password && password.length < 6) { toast('New password must be at least 6 characters'); return; }
+    if (password !== fd.get('confirm')) { toast('New passwords don\'t match'); return; }
+    await saveAccount(username, password || fd.get('current'));
+    toast('Login updated');
+    router();
+  });
+  $('#sign-out').addEventListener('click', async () => {
+    await endSession();
+    unlocked = false;
+    router();
   });
 
   $('#export').addEventListener('click', exportBackup);
@@ -1290,10 +1333,114 @@ async function importBackup(file) {
 }
 
 // ---------------------------------------------------------------------------
+// Login
+// ---------------------------------------------------------------------------
+async function viewAuth(mode) {
+  const account = await getAccount();
+  mode = mode || (account ? 'login' : 'setup');
+  document.body.classList.add('locked');
+  setTab(null);
+  $('#topbar').innerHTML = '';
+
+  const brand = `<div class="auth-brand">
+      <img src="icons/icon-192.png" alt="" width="72" height="72">
+      <h1>${esc(settings.businessName)}</h1>
+    </div>`;
+  const showPw = `<label class="row small muted" style="gap:8px;margin-top:10px"><input type="checkbox" id="show-pw"> Show password</label>`;
+
+  let html;
+  if (mode === 'setup') {
+    html = `${brand}
+      <form class="card stack" id="auth-form" autocomplete="on">
+        <div><h2 style="font-size:20px">Create your login</h2>
+        <p class="muted small" style="margin:6px 0 0">You'll use this to open the app. It's saved on this device only.</p></div>
+        <label class="field"><span>Username</span><input name="username" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></label>
+        <label class="field"><span>Password <span class="tiny">(at least 6 characters)</span></span><input name="password" type="password" autocomplete="new-password" minlength="6" required></label>
+        <label class="field"><span>Confirm password</span><input name="confirm" type="password" autocomplete="new-password" required></label>
+        ${showPw}
+        <button class="btn primary block big" type="submit">Create login</button>
+      </form>`;
+  } else if (mode === 'forgot') {
+    html = `${brand}
+      <div class="card stack">
+        <h2 style="font-size:20px">Forgot your password?</h2>
+        <p class="small" style="margin:0">For privacy, your password isn't stored anywhere it can be recovered from, and there's no server to reset it.</p>
+        <p class="small" style="margin:0"><b>First, try your phone's saved passwords</b> (iPhone: Settings → Passwords; Android: Google Password Manager).</p>
+        <p class="small" style="margin:0">If that doesn't work, you can erase this app's data and start over, then restore your latest backup file from Settings.</p>
+        <label class="field"><span>Type ERASE to confirm</span><input id="erase-confirm" autocapitalize="characters" autocomplete="off"></label>
+        <button class="btn danger block" id="erase" disabled>Erase all data on this device</button>
+        <button class="btn ghost block" id="back-login">Back to sign in</button>
+      </div>`;
+  } else {
+    html = `${brand}
+      <form class="card stack" id="auth-form" autocomplete="on">
+        <h2 style="font-size:20px">Sign in</h2>
+        <label class="field"><span>Username</span><input name="username" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></label>
+        <label class="field"><span>Password</span><input name="password" type="password" autocomplete="current-password" required></label>
+        ${showPw}
+        <label class="row small" style="gap:8px"><input type="checkbox" name="remember" checked> Keep me signed in for ${REMEMBER_DAYS} days</label>
+        <p class="status-text high small" id="auth-error" style="margin:0" hidden></p>
+        <button class="btn primary block big" type="submit">Sign in</button>
+        <button class="btn ghost block sm" type="button" id="forgot">Forgot password?</button>
+      </form>`;
+  }
+  $('#app').innerHTML = `<div class="auth">${html}</div>`;
+
+  $('#show-pw')?.addEventListener('change', (e) => {
+    $$('#auth-form input[name=password], #auth-form input[name=confirm]').forEach((i) => { i.type = e.target.checked ? 'text' : 'password'; });
+  });
+  $('#forgot')?.addEventListener('click', () => viewAuth('forgot'));
+  $('#back-login')?.addEventListener('click', () => viewAuth('login'));
+  $('#erase-confirm')?.addEventListener('input', (e) => { $('#erase').disabled = e.target.value.trim() !== 'ERASE'; });
+  $('#erase')?.addEventListener('click', async () => {
+    try { sessionStorage.clear(); } catch { /* storage blocked */ }
+    await destroyDatabase();
+    location.hash = '#/today';
+    location.reload();
+  });
+
+  $('#auth-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = $('#auth-form button[type=submit]');
+    const fd = new FormData(e.target);
+    const username = fd.get('username').trim();
+    const password = fd.get('password');
+    btn.disabled = true;
+    try {
+      if (mode === 'setup') {
+        if (!username) { toast('Enter a username'); return; }
+        if (password.length < 6) { toast('Password must be at least 6 characters'); return; }
+        if (password !== fd.get('confirm')) { toast('Passwords don\'t match'); return; }
+        await saveAccount(username, password);
+        await startSession(true);
+      } else {
+        const result = await verifyLogin(username, password);
+        if (!result.ok) {
+          const err = $('#auth-error');
+          err.hidden = false;
+          err.textContent = result.wait
+            ? `Too many attempts. Try again in ${result.wait} seconds.`
+            : 'Username or password is incorrect.';
+          $('#auth-form [name=password]').value = '';
+          return;
+        }
+        await startSession(fd.get('remember') === 'on');
+      }
+      unlocked = true;
+      document.body.classList.remove('locked');
+      router();
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------------
 async function start() {
   await loadSettings();
+  unlocked = !!(await getAccount()) && (await isSignedIn());
   window.addEventListener('hashchange', router);
   // Re-render Today when the app comes back to the foreground on a new day.
   let lastDay = todayISO();
