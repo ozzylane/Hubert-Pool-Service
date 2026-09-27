@@ -128,7 +128,7 @@ function routeUrl(addresses) {
 }
 const smsUrl = (phone, body) => `sms:${digits(phone)}?&body=${encodeURIComponent(body)}`;
 const mailUrl = (email, subject, body) =>
-  `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  `mailto:${email.trim().replace(/[\s?&#]/g, '')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
 let toastTimer;
 function toast(msg) {
@@ -926,6 +926,7 @@ async function viewVisit(id, current = () => true) {
   });
 
   const text = reportText(visit, client, settings);
+  const firstName = client.name.trim().split(/\s+/)[0] || 'customer';
   const subject = `Pool service report – ${fmtDay(visit.day, { weekday: 'short', month: 'short', day: 'numeric' })}`;
   const photoUrls = await Promise.all((visit.photos || []).map((p) => photoUrl(p.id)));
   if (!current()) return;
@@ -941,15 +942,17 @@ async function viewVisit(id, current = () => true) {
   $('#app').innerHTML = `
     <div class="section"><h2>Send to customer</h2>${sentBits.length ? '<span class="badge ok">Sent</span>' : '<span class="badge warn">Not sent yet</span>'}</div>
     <div class="card stack">
-      <button class="btn primary block big" id="share" disabled>${ICONS.share}Send photo report</button>
-      <p class="muted small" style="margin:6px 2px 0">Opens your phone's share menu. Pick <b>Messages</b> or <b>Mail</b>, then choose ${esc(client.name.split(' ')[0])}.
-        ${client.phone ? `Their number is <b>${esc(client.phone)}</b>.` : ''}</p>
+      ${client.phone ? `<a class="btn primary block big send-btn" id="sms" href="${smsUrl(client.phone, text)}">${ICONS.text}<span>Text ${esc(firstName)}<small>${esc(client.phone)}</small></span></a>` : ''}
+      ${client.email ? `<a class="btn primary block big send-btn" id="mail" href="${mailUrl(client.email, subject, text)}">${ICONS.mail}<span>Email ${esc(firstName)}<small>${esc(client.email)}</small></span></a>` : ''}
+      ${!client.phone || !client.email ? `<p class="small muted" style="margin:0">${client.phone ? 'No email' : client.email ? 'No mobile number' : 'No mobile number or email'} saved for ${esc(firstName)}.
+        ${client.id ? `<a href="#/client/${client.id}/edit">Add it</a> to fill it in automatically.` : ''}</p>` : ''}
+      ${client.phone || client.email ? `<div class="howto small">
+        <b>To add the photo:</b> the report photo is copied when you tap a button above. In the message, <b>tap and hold</b> where you type and choose <b>Paste</b>, then send.
+      </div>` : ''}
       <div class="btn-grid">
-        ${client.phone ? `<a class="btn" id="sms" href="${smsUrl(client.phone, text)}">${ICONS.text}Text</a>` : ''}
-        ${client.email ? `<a class="btn" id="mail" href="${mailUrl(client.email, subject, text)}">${ICONS.mail}Email</a>` : ''}
-        <button class="btn" id="save-img" disabled>${ICONS.download}Save image</button>
+        <button class="btn sm" id="share" disabled>${ICONS.share}Share menu</button>
+        <button class="btn sm" id="save-img" disabled>${ICONS.download}Save image</button>
       </div>
-      <p class="muted tiny" style="margin:4px 2px 0"><b>Text</b> and <b>Email</b> open a message already addressed to the customer with the written summary. To add the photo there too, tap <b>Save image</b> first and attach it from your camera roll.</p>
       ${sentBits.length ? `<p class="tiny ok status-text ok" style="margin:0">${sentBits.map(esc).join(' · ')}</p>` : ''}
       <button class="btn ghost sm" id="mark-sent">${sentBits.length ? 'Mark as not sent' : 'Mark as sent'}</button>
     </div>
@@ -1035,8 +1038,28 @@ async function viewVisit(id, current = () => true) {
     }
   });
 
-  $('#sms')?.addEventListener('click', () => markSent('sentText'));
-  $('#mail')?.addEventListener('click', () => markSent('sentEmail'));
+  // A PNG copy of the report for the clipboard (Safari only copies PNG images).
+  const pngPromise = card ? toPng(card).catch(() => null) : Promise.resolve(null);
+
+  // Copy the report photo, then open the pre-addressed message.
+  const openMessage = (link, field) => link?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    let copied = false;
+    try {
+      if (card && navigator.clipboard?.write && window.ClipboardItem) {
+        const blob = pngPromise.then((b) => b || Promise.reject(new Error('no image')));
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        copied = true;
+      }
+    } catch (err) {
+      console.warn('Could not copy report image', err);
+    }
+    await markSent(field);
+    if (copied) toast('Photo copied — hold in the message and tap Paste');
+    setTimeout(() => { location.href = link.href; }, copied ? 350 : 0);
+  });
+  openMessage($('#sms'), 'sentText');
+  openMessage($('#mail'), 'sentEmail');
   $('#mark-sent').addEventListener('click', async () => {
     if (sentBits.length) {
       delete visit.sentAt; delete visit.sentText; delete visit.sentEmail;
@@ -1054,6 +1077,15 @@ async function viewVisit(id, current = () => true) {
     toast('Visit deleted');
     location.hash = client.id ? `#/client/${client.id}` : '#/history';
   });
+}
+
+async function toPng(jpegBlob) {
+  const img = await loadImage(jpegBlob);
+  const c = document.createElement('canvas');
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  c.getContext('2d').drawImage(img, 0, 0);
+  return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('PNG export failed'))), 'image/png'));
 }
 
 function openLightbox(src) {

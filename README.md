@@ -14,7 +14,7 @@ also works offline.
 - **Today's route**: the clients due today, in the order you set, with progress, gate codes and one-tap directions. "Open remaining route" sends every remaining stop to Google Maps. Clients who are overdue are flagged.
 - **Clients**: name, mobile number, email, address, service days, how often (weekly / every 2 weeks / monthly / on call), pool type (chlorine or salt), gallons, rate, gate code and notes.
 - **Service visit**: before and after photos, a checklist you can edit, water test readings (chlorine, pH, alkalinity, CYA, calcium, salt, temperature) with target ranges and last visit's numbers, chemicals added and notes. Unfinished visits are saved automatically. If the phone closes the app while the camera is open, nothing is lost.
-- **Send report**: builds a branded report image (photo, readings, checklist, chemicals, notes) and opens the phone's share menu to send it by **Messages** or **Mail**. **Text** / **Email** buttons open a message already addressed to the customer with a written summary.
+- **Send report**: builds a branded report image (photo, readings, checklist, chemicals, notes). **Text** and **Email** buttons open a message already addressed to the customer with the summary filled in, and copy the photo so it can be pasted in.
 - **History**: every visit, with visits this week and this month, an estimate of what was billed this month, and a "report not sent" filter.
 - **Backup / restore**: saves all data, including photos, to a single file.
 
@@ -57,12 +57,12 @@ Then open **Settings** in the app and enter the business phone number and email 
 ## Sending reports: how it works
 
 A website can't send texts or emails in the background without a paid service
-(for example Twilio or SendGrid). This app uses the phone's own apps instead:
+(for example Twilio or SendGrid), so the app uses the phone's own Messages and Mail apps:
 
-1. **Send photo report** opens the share menu with the report image and summary attached. Choose Messages or Mail, then pick the customer.
-2. **Text** / **Email** open a new message already addressed to the customer with the written summary. To include the photo, use **Save image** first and attach it.
+1. On a finished visit, tap **Text [name]** or **Email [name]**. A new message opens already addressed to that customer's number or email from their client record, with the report summary filled in.
+2. The report photo is copied at the same moment. In the message, **tap and hold** where you type, choose **Paste**, then send.
 
-The app records when each report was sent, and History lists any visits without one.
+**Share menu** and **Save image** are still there as other ways to send. If a client has no mobile number or email saved, the app shows a link to add it.
 
 ## Development
 
